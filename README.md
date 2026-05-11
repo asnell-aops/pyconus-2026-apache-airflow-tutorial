@@ -105,7 +105,7 @@ You can use a postgres client like pgadmin or dbeaver(my favorite) or any other 
 You need to connect two db's one is for our data engineering stuff, one is used by airflow.
 After connecting to the DB you should able to explore the tables like below
 
-![dbeaver screenshot sample after connecting to the DBs](dbeaver-tables.png)
+![dbeaver screenshot sample after connecting to the DBs](assets/images/dbeaver-tables.png)
 
 
 ```
@@ -118,6 +118,9 @@ postgresql://airflow:airflow@localhost:5432/bookops
 1. Open [http://localhost:8501/](http://localhost:8501/) on your browser.
 2. You will see `BookShop Pipeline Dashboard`
 3. Don't worry about the errors, we run the pipeline to fill up this dashboard.
+
+
+> End of Setup. The rest we can do it at the workshop
   
 
 ## Exercises
