@@ -19,8 +19,15 @@ raw_sales_asset = Asset("raw_sales_starter")
 def daily_sales():
 
     # TODO 1: Add a task that prints logical_date(ds) and timestamp(ts)
+    @task
+    def log_date(ds=None, ts=None):
+        print(f"Logical date: {ds} | Triggered at: {ts}")
 
     # TODO 2: Add a branch operator that checks if file exists. If it does, continue to insert_sales. If not, skip to the end.    
+    @task.branch
+    def check_file(ds=None):
+        path = REPO_ROOT / "data" / "sales" / f"{ds}.json"
+        return "insert_sales" if path.exists() else "no_file"
 
     # ignore this outlet for now, it's covered in next module
     @task(outlets=[raw_sales_asset])
@@ -28,7 +35,10 @@ def daily_sales():
         # TODO 3: Build the file path using the `ds` variable (logical date, format YYYY-MM-DD).
         # The sales files live at: REPO_ROOT / "data" / "sales" / "<date>.json"
         # Load and return the JSON content as a Python list.
-        records = []
+        path = REPO_ROOT / "data" / "sales" / f"{ds}.json"
+        records = json.loads(path.read_text())
+
+        # records = []
 
         hook = PostgresHook(postgres_conn_id="bookshop_postgres")
         hook.run("DELETE FROM raw_sales WHERE sale_date = %s", parameters=[ds])
@@ -53,13 +63,20 @@ def daily_sales():
         }
 
     @task
+    def no_file():
+        print("No file to process.")
+
+    @task
     def log_summary(summary_dict):
         # TODO 4: Print a summary line showing the date and the number of records inserted.
         # Hint: `count` is the return value from insert_sales, passed via XCom automatically.
         print(f"Date: {summary_dict['date']} | Inserted: {summary_dict['count']} records into raw_sales")
 
+    log_date_task = log_date()
+    check_file_task = check_file()
     count = insert_sales()
     log_summary(count)
 
+    log_date_task >> check_file_task >> [count, no_file()]
 
 daily_sales()
