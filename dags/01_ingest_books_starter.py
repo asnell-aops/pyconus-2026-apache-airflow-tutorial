@@ -54,6 +54,7 @@ def ingest_books():
         task_id="reconcile",
         conn_id="bookshop_postgres",
         sql="SELECT COUNT(*) FROM books",
+        show_return_value_in_logs=True
     )
 
     create_tables >> load_books() >> reconcile
