@@ -1,30 +1,4 @@
 ---
-layout: blue-title-slide
----
-
-# From Fragile Scripts
-## to a Trusted Pipeline
-
-<div class="summary-grid">
-  <div class="summary-card" v-click>
-    <strong>Reliable ingest</strong>
-    <span>Books catalog loads idempotently — same result every run</span>
-  </div>
-  <div class="summary-card" v-click>
-    <strong>Incremental loads</strong>
-    <span>Each sales file loaded for its own date, backfillable on demand</span>
-  </div>
-  <div class="summary-card" v-click>
-    <strong>Quality gates</strong>
-    <span>Bad records quarantined with a reason, never silently loaded</span>
-  </div>
-  <div class="summary-card" v-click>
-    <strong>Event-driven reporting</strong>
-    <span>Genre report builds automatically when validated data is ready</span>
-  </div>
-</div>
-
----
 layout: blue-sidebar
 ---
 
@@ -34,13 +8,14 @@ layout: blue-sidebar
 
 ::content::
 
-<ul class="check-list">
+<ul>
   <li>DAG anatomy: <code>@dag</code>, <code>@task</code>, <code>>></code>, manual trigger, Airflow UI</li>
   <li>Connections and PostgresHook — credentials out of code</li>
   <li>Scheduling, catchup, Jinja <code v-pre>{{ ds }}</code>, logical date, XCom</li>
   <li>Branching with <code>@task.branch</code>, trigger rules, quarantine pattern</li>
   <li>Dynamic Task Mapping with <code>.expand()</code> for parallel processing</li>
-  <li>Assets — event-driven scheduling between decoupled DAGs</li>
+  <li>Assets - event-driven scheduling between decoupled DAGs</li>
+  <li>Full-load, incremental data ingestion, validation, reporting</li>
 </ul>
 
 ---
@@ -58,15 +33,14 @@ layout: blue-sidebar
 
 ### Go deeper on Airflow
 
-<v-clicks>
+<v-click>
 
 - **TaskGroups** — visually group related tasks inside a DAG
 - **Sensors** — wait for a file, a table, or an external condition
-- **Providers** — installable packages for S3, GCS, Slack, dbt, and more
 - **KubernetesExecutor** — run each task in its own pod at scale
 - **Deferrable operators** — async waiting without blocking a worker slot
 
-</v-clicks>
+</v-click>
 
 </div>
 
@@ -74,15 +48,14 @@ layout: blue-sidebar
 
 ### Grow the system
 
-<v-clicks>
+<v-click>
 
 - dbt for SQL transform ownership
 - Great Expectations for richer data quality contracts
 - Asset-aware orchestration with multiple upstream dependencies
-- Airflow Variables and Connections for environment-based config
-- AI-aware operators and service integrations
+- AI pipelines and operators
 
-</v-clicks>
+</v-click>
 
 </div>
 </div>

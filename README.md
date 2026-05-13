@@ -4,25 +4,14 @@ Hands-on workshop scaffold for teaching Apache Airflow 3.2 through a fictional B
 
 [Slide deck (PDF)](slides/workshop-slides.pdf)
 
-> IMPORTANT 🚨: Please complete the setup before the tutorial. We need to pull(download) docker images and install packages, let's do it faster at the comfort of our home internet.
+> IMPORTANT 🚨: Please complete the following setup before the tutorial. We need to pull(download) docker images and install packages, let's do it faster at the comfort of our home WIFI.
 
 ## Setup 
 
 ### Prerequisites
 
 - Python 3.12
-- Docker Desktop with at least 4 GB memory, or a local Postgres instance
-
-### Clone this repo
-
-```
-git clone git@github.com:thelearningdev/pyconus-2026-apache-airflow-tutorial.git
-```
-
-### Airflow Environment
-
-Goal: To get the Airflow home page after logging in
-![airflow home screen screenshot](assets/images/airflow-home-screen.png)
+- Docker Desktop with at least 4 GB memory
 
 ### Using Github Codespaces
 
@@ -37,6 +26,17 @@ PORTS
 - 8080 for airflow
 - 5432 for postgres
 - 8501 for analytics app
+
+### Goal: Airflow Environment
+
+To get the Airflow home page after logging in
+![airflow home screen screenshot](assets/images/airflow-home-screen.png)
+
+### Clone this repo
+
+```
+git clone git@github.com:thelearningdev/pyconus-2026-apache-airflow-tutorial.git
+```
 
 ### Setup Local Python Environment
 
@@ -56,19 +56,12 @@ We will use `docker-compose` to run our airflow system, a postgres db and an ana
 docker compose up --build
 ```
 
-If `8080` is busy:
-
-```bash
-AIRFLOW_PORT=8081 docker compose up --build
-```
-
 ## Setup Check
 
 
 ### 1. Airflow is up and Running
 
-Open [http://localhost:8080](http://localhost:8080) you'll see 
-> use 8081 if your 8080 is busy
+Open [http://localhost:8080](http://localhost:8080)
 
 ![airflow login screen screenshot](assets/images/airflow-login.png)
 
@@ -76,7 +69,7 @@ and sign in with
 
 
 ```
-username: airflow
+username: admin
 password: <find-in-file-simple_auth_manager_passwords.json.generated>
 ```
 
@@ -107,6 +100,7 @@ After connecting to the DB you should able to explore the tables like below
 
 ![dbeaver screenshot sample after connecting to the DBs](assets/images/dbeaver-tables.png)
 
+> Note that you're connecting to two databases running in your docker container. One to load the books data another to hold airflow related information. O
 
 ```
 postgresql+psycopg://airflow:airflow@localhost:5432/airflow
@@ -128,6 +122,19 @@ postgresql://airflow:airflow@localhost:5432/bookops
 
 ## Notes
 
-1. Anytime Airflow feels clumsy run `airflow db clean --tables "dag_run,task_instance,log,xcom,asset,job" --clean-before-timestamp 2026-12-12T00:00:00 --yes` where airflow is running you will have a cleaner setu.
+1. Anytime Airflow feels clumsy run we can reset airflow db for a cleaner setup
+
+```
+docker-compose exec airflow /bin/bash
+```
+
+Will open the airflow container shell. In there run
+
+```
+airflow db reset -y
+airflow db migrate
+airflow dags reserialize
+```
+
 2. If your tasks are not getting scheduled or running for any reason, restart the airflow terminal/docker container, you should be good. Since we are using standalone version, rarely everything gets mushed together
 

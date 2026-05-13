@@ -63,7 +63,8 @@ slides/                 Slidev presentation workspace
 ## Database Schema
 
 **`books`**: `isbn TEXT PK, title TEXT NOT NULL, author TEXT, genre TEXT, price NUMERIC(6,2)`
-**`daily_sales`**: `sale_id SERIAL PK, isbn TEXT, sale_date DATE, quantity INT, total NUMERIC(8,2)`
+**`raw_sales`**: `sale_id SERIAL PK, isbn TEXT, sale_date DATE, quantity INT, total NUMERIC(8,2)` (written by DAG 02, pre-validation)
+**`daily_sales`**: `sale_id SERIAL PK, isbn TEXT, sale_date DATE, quantity INT, total NUMERIC(8,2)` (written by DAG 03b, post-validation)
 **`sales_quarantine`**: `raw JSONB, reason TEXT, quarantined_at TIMESTAMP`
 **`daily_report`**: `report_date DATE, genre TEXT, books_sold INT, revenue NUMERIC(10,2), PK(report_date, genre)`
 

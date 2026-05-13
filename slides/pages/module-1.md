@@ -3,7 +3,7 @@ layout: blue-title-slide
 ---
 
 ## Module 1
-# Load the Data
+# Ingest Data
 
 ---
 layout: blue-sidebar
@@ -78,6 +78,14 @@ hook.insert_rows(
 </v-clicks>
 
 ---
+layout: blue-title-slide
+---
+
+# Exercise 1
+
+Complete `ingest_books` Dag
+
+---
 layout: blue-sidebar
 ---
 
@@ -87,27 +95,27 @@ layout: blue-sidebar
 
 ::content::
 
-Idempotency ensures that running a data pipeline multiple times with the same input produces the exact same output, preventing duplicates and data corruption
+- Idempotency ensures that running a data pipeline multiple times with the same input produces the exact same output, preventing duplicates and data corruption
 
-
----
-layout: blue-title-slide
----
-
-# Exercise 1
-
+- Consistent Results
+- Duplicate Prevention
+- Fault tolerance
 
 ---
-layout: blue-title-slide
+layout: blue-sidebar
 ---
 
-# After Exercise 1
+::header::
 
-We have a catalog in the database.
-<br>
-It loads the same ~~25~~ 24 rows whether you run it once or ten times.
+## Full-Load
 
-### Idempotency ✅
+::content::
+
+- The act of replacing the old data with full-set of new data is called Full-load. 
+- Also known as `bulk refresh`
+- The alternative is incremental load
+- Good for small datasets, dimension tables.
+
 
 
 ---
@@ -116,7 +124,26 @@ layout: blue-sidebar
 
 ::header::
 
-## Stretch Goal
+# Ingestion 101: Reflections
+
+::content::
+
+<ul class="check-list">
+  <li>Providers and Hooks 201</li>
+  <li>Wrote your own DAG</li>
+  <li>Idempotency</li>
+  <li>Full Load</li>
+</ul>
+
+
+
+---
+layout: blue-sidebar
+---
+
+::header::
+
+## Next Goal
 
 ::content::
 

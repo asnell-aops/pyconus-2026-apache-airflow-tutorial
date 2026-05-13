@@ -6,6 +6,14 @@ CREATE TABLE IF NOT EXISTS books (
     price   NUMERIC(6,2)
 );
 
+CREATE TABLE IF NOT EXISTS raw_sales (
+    sale_id   SERIAL PRIMARY KEY,
+    isbn      TEXT,
+    sale_date DATE NOT NULL,
+    quantity  INT NOT NULL,
+    total     NUMERIC(8,2) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS daily_sales (
     sale_id   SERIAL PRIMARY KEY,
     isbn      TEXT,

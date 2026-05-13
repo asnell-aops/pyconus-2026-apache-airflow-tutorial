@@ -4,7 +4,7 @@ layout: blue-title-slide
 
 ## Module 2
 # Daily Sales Ingest
-
+(Incremental)
 ---
 layout: blue-sidebar
 ---
@@ -73,12 +73,18 @@ layout: blue-sidebar
 3. Schedule = Daily
 4. No of catchup DagRuns = 13
 
+</v-click>
+
+<br/>
+
+<v-click>
+
 > if it's scheduled weekly?
 
 </v-click>
 
-
 <br/>
+
 <v-click>
 
 ### Catchup let's your DagRuns catchup(run) on all past schedules
@@ -138,11 +144,14 @@ layout: blue-sidebar
 
 ::content::
 
+XComs are an airflow construct to share small data between tasks. 
+
+
 #### Passing Values Between Tasks
 
 ```python
 @task
-def insert_sales(records, ds=None):
+def insert_sales(ds=None):
     hook = PostgresHook(postgres_conn_id="bookshop_postgres")
     rows = ...                 # Assume we fetched the rows here
     return len(rows)           # pushed to XCom automatically
@@ -150,7 +159,11 @@ def insert_sales(records, ds=None):
 @task
 def log_summary(count, ds=None):
     print(f"Date: {ds} | Inserted: {count} records")
-    #                               ^ pulled from XCom automatically & passed as argument
+    #                       ^ pulled from XCom automatically & passed as argument
+
+# Passing xcom while chaining
+# denotes that the output `insert_sales` is input to `log_summary`
+log_summary(insert_sales())
 ```
 
 <v-clicks>
@@ -173,24 +186,21 @@ Load one JSON file per day using `ds`. Enable catchup and watch 7 backfill runs 
 `dags/02_daily_sales_starter.py`
 
 ---
-layout: blue-title-slide
+layout: blue-sidebar
 ---
 
-# After Exercise 2
+::header::
 
-<div class="big-idea">
-Seven days of sales loaded automatically.
-<br>
-<span v-click>Each run knows its own date and loads only its own file.</span>
-</div>
+# Incremental Ingestion
 
-<div v-click class="subtle-line">
+::content::
 
-Incremental Loading ✅ <br/>
-Backfill Data ✅ <br/>
-Scheduling Dags ✅ <br/>
-
-</div>
+<ul class="check-list">
+  <li>Incremental Loading</li>
+  <li>Backfill Data </li>
+  <li>Scheduling Dags </li>
+  <li>Logical Date</li>
+</ul>
 
 ---
 layout: blue-sidebar
@@ -198,105 +208,11 @@ layout: blue-sidebar
 
 ::header::
 
-## Stretch Goal
+## Next Goal
 
 ::content::
 
 <div class="concept-step">
   <strong>What if we want to validate the data as and when we complete ingestion?</strong>
   <p>How will we schedule the downstream dag based on upstream's completion</p>
-</div>
-
----
-layout: blue-sidebar
----
-
-::header::
-
-## Assets
-
-::content::
-
-<div class="panel pain">
-
-**Problem:** Time-based schedules don't know if the upstream DAG finished.
-A DAG scheduled at 6am might start before yesterday's data arrived.
-
-</div>
-
-<v-click>
-
-<div class="panel action">
-
-**Solution:** Assets -- a DAG declares what data it produces; downstream DAGs run when that data is ready, not on a clock.
-
-</div>
-
-</v-click>
-
----
-layout: blue-sidebar
----
-
-::header::
-
-## Assets -- Producer
-
-::content::
-
-```python
-@task(outlets=[Asset("raw_sales")])
-def insert_sales(ds=None, **context):
-    # ... insert rows ...
-
-    # Attach metadata to the asset event
-    context["outlet_events"][Asset("raw_sales")].extra = {
-        "date": ds,
-        "count": len(records),
-    }
-```
-
-<v-click>
-
-- `outlets` declares what this task produces
-- `outlet_events[asset].extra` attaches a dict that travels with the event
-
-</v-click>
-
----
-layout: blue-sidebar
----
-
-::header::
-
-## Assets -- Consumer
-
-::content::
-
-```python
-@dag(schedule=Asset("raw_sales"))   # fires when raw_sales is updated
-def downstream():
-    @task
-    def print_event(**context):
-        events = context["triggering_asset_events"][Asset("raw_sales")]
-        print(events[0].extra)
-        # {"date": "2026-05-01", "count": 5}
-```
-
-<v-clicks>
-
-- `schedule=Asset(...)` replaces a cron string -- no fixed time needed
-- `triggering_asset_events` gives the consumer access to the producer's extra data
-
-</v-clicks>
-
----
-layout: blue-title-slide
----
-
-# Exercise 3a
-### Asset Handoff
-
-<div class="exercise-why">
-Wire the producer → consumer handoff before Exercise 3b layers validation and HITL on top.
 </div>

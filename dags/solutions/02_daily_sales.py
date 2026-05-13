@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 
 @dag(
     dag_id="02_daily_sales",
-    start_date=datetime(2026, 4, 30),
+    start_date=datetime(2026, 5, 5),
     schedule="@daily",
     catchup=True,
     tags=["solution"],
@@ -20,7 +20,7 @@ def daily_sales():
     @task
     def print_logical_date_and_ds(ds=None, ts=None):
         print(f"timestamp: {ts} | ds: {ds}")
-
+    
     @task.branch
     def check_file(ds=None):
         path = REPO_ROOT / "data" / "sales" / f"{ds}.json"
@@ -37,9 +37,10 @@ def daily_sales():
         records = json.loads(path.read_text())
 
         hook = PostgresHook(postgres_conn_id="bookshop_postgres")
+        hook.run("DELETE FROM raw_sales WHERE sale_date = %s", parameters=[ds])
         rows = [(rec["isbn"], ds, rec["quantity"], rec["total"]) for rec in records]
         hook.insert_rows(
-            table="daily_sales",
+            table="raw_sales",
             rows=rows,
             target_fields=["isbn", "sale_date", "quantity", "total"],
         )
@@ -52,7 +53,7 @@ def daily_sales():
 
     @task
     def log_summary(summary_dict):
-        print(f"Date: {summary_dict['date']} | Inserted: {summary_dict['count']} records into daily_sales")
+        print(f"Date: {summary_dict['date']} | Inserted: {summary_dict['count']} records into raw_sales")
 
 
     @task

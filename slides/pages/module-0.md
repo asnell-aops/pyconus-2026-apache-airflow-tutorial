@@ -16,15 +16,14 @@ Before the real pipeline, build one DAG that exercises every concept you will re
 </div>
 
 ---
-layout: blue-sidebar
+layout: plain
 ---
 
-::header::
+# Airflow 101 Dag
 
-# The DAG — What We Are Building
-
-::content::
-
+<div style="width: 100%; max-width: 1100px; margin: 0 auto; margin-right: 1em ;">
+<div style="transform-origin: top left;">
+  
 ```mermaid
 flowchart LR
     A["greet\n@task"] --> B["check_db_with_hook\n@task"]
@@ -34,9 +33,12 @@ flowchart LR
     D --> E
     E -->|"env=dev"| F["path_dev\nEmptyOperator"]
     E -->|"env=prod"| G["path_prod\nEmptyOperator"]
-    F --> H["done\nNONE_FAILED_MIN_ONE_SUCCESS"]
+    F --> H["done"]
     G --> H
 ```
+
+</div>
+</div>
 
 ---
 layout: blue-title-slide
@@ -45,7 +47,8 @@ layout: blue-title-slide
 # Exercise 0
 ### Run the Hello World DAG
 
-Trigger it, break it with a missing Variable, fix it, and watch which branch runs.
+Trigger it, Some tasks will fail, check why
+
 
 `dags/00_hello_world.py`
 
@@ -93,6 +96,8 @@ layout: blue-sidebar
 ::content::
 
 <div class="balanced-cols">
+
+<v-clicks>
 <div>
 
 ### `@task` — Python shorthand
@@ -103,68 +108,42 @@ def say_hello() -> str:
     message = "Hello, Airflow 3!"
     print(message)
     return message
+
+hello_task = say_hello()
 ```
-
-<v-clicks>
-
-- Wraps a plain Python function as a task
-- Return value is automatically stored as XCom
-- Cleaner than instantiating `PythonOperator` directly
-
-</v-clicks>
-
 </div>
+
 <div>
 
-### `BashOperator` — run shell commands
+### Equvivalent `PythonOperator`
 
 ```python
-check_date = BashOperator(
+
+def say_hello() -> str:
+    message = "Hello, Airflow 3!"
+    print(message)
+    return message
+
+hello_task = PythonOperator(
     task_id="check_date",
-    bash_command="echo 'Today: ' $(date)",
+    python_callable=say_hello()
 )
 ```
-
-<v-clicks>
-
-- Use when the work is a shell command, not Python
-- `task_id` is how Airflow identifies the task in the UI and logs
-
+</div>
 </v-clicks>
 
 </div>
-</div>
 
----
-layout: blue-sidebar
----
+<v-click>
 
-::header::
+### Other SDK Alternatives
 
-# XCom (Cross-Task Communication)
+- `@task.bash`
+- `@task.branch`
+- `@task.virutalenv`
 
-::content::
+</v-click>
 
-```python
-@task
-def say_hello() -> str:
-    return "Hello, Airflow 3!"          # pushed to XCom automatically
-
-@task
-def log_greeting(greeting: str) -> None:
-    print(f"Received: {greeting!r}")    # pulled from XCom automatically
-
-greeting = say_hello()
-log_greeting(greeting)                  # wire the return value directly
-```
-
-<v-clicks>
-
-- XCom lets tasks share small values (strings, dicts, lists)
-- With `@task`, passing a return value as an argument wires XCom transparently
-- Keep XCom small — large datasets belong in storage, not in Airflow's metadata DB
-
-</v-clicks>
 
 ---
 layout: blue-sidebar
@@ -224,6 +203,7 @@ branch >> [path_dev, path_prod]
 - Real use cases: environment checks, feature flags, data-driven routing
 
 </v-clicks>
+
 
 ---
 layout: blue-sidebar
@@ -292,7 +272,11 @@ layout: blue-sidebar
 <br/>
 
 <v-click>
+
+<div class="exercise-why" v-click>
 Used when: The same DAG file works in dev and prod because the connection ID stays the same — only the credentials change per environment.
+</div>
+
 </v-click>
 
 ---
@@ -362,7 +346,7 @@ layout: blue-sidebar
 - **Executor** — decides where tasks run (same process, separate process, or remote worker)
 - **Triggerer** — like worker, but for deferred tasks so it doesn't block other work
 - **Dag processor** — serializes DAGs and makes them available to other components
-- **Metadata DB** — the source of truth for all run history, XCom, connections, and variables
+- **Metadata DB** — the source of truth for all run history, connections, and variables
 
 </v-clicks>
 
@@ -377,7 +361,7 @@ layout: blue-sidebar
 ::content::
 
 <div class="exercise-why">
-This workshop uses <strong>SequentialExecutor</strong> — one task at a time, zero infrastructure setup. The same DAG file runs unchanged on LocalExecutor, CeleryExecutor, or KubernetesExecutor in production.
+This workshop uses <strong>SequentialExecutor</strong> — one task at a time, no infrastructure setup.
 </div>
 
 <v-clicks>
@@ -388,8 +372,8 @@ This workshop uses <strong>SequentialExecutor</strong> — one task at a time, z
 
 </v-clicks>
 
-<div class="caption" v-click>
-The executor is an infrastructure concern, not a DAG concern. The same DAG file runs on any executor without changes.
+<div class="exercise-why" v-click>
+Changing the executor will not change how to Dag Runs.
 </div>
 
 ---
@@ -398,14 +382,13 @@ layout: blue-sidebar
 
 ::header::
 
-# Airflow: Reflections
+# Airflow 101: Reflections
 
 ::content::
 
 <ul class="check-list">
-  <li>Airflow pipeline concetps - Dag, Task, XCom, Variables, Connections...</li>
+  <li>Airflow pipeline concetps - Dag, Task, Variables, Connections...</li>
   <li>DAG Code Concepts - Chaining, Branching, Trigger Rules</li>
   <li>Airflow Infrastructure</li>
+  <li>Airflow is still an orchestration engine, not a transformation engine</li>
 </ul>
-
-> Airflow is still an orchestration engine, not a transformation engine

@@ -19,3 +19,4 @@ airflow.db-shm
 airflow.db-wal
 data/amazon-books-data/*.csv
 .playwright*
+venv

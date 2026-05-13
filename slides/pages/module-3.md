@@ -5,6 +5,13 @@ layout: blue-title-slide
 ## Module 3
 # Validate and Approve
 
+
+---
+layout: blue-title-slide
+---
+
+# Assets
+
 ---
 layout: blue-sidebar
 ---
@@ -15,20 +22,22 @@ layout: blue-sidebar
 
 ::content::
 
-<div class="concept-shell">
-  <div class="concept-step warning">
-    <strong>Schedules couple pipelines by time</strong>
-    <p>DAG 04 running every hour does not know whether DAG 03 already finished. It just fires on the clock and hopes the data is ready.</p>
-  </div>
-  <div class="concept-step action" v-click>
-    <strong>Assets couple pipelines by data</strong>
-    <p>An Asset is a named logical dataset. When a task emits an Asset, Airflow records it. Any DAG scheduled on that Asset wakes up automatically — no polling, no guessing.</p>
-  </div>
-  <div class="concept-step success" v-click>
-    <strong>The result</strong>
-    <p>DAG 04 runs exactly when DAG 03 finishes and marks <code>daily_sales</code> ready — not a minute sooner, not a minute later.</p>
-  </div>
+<div class="panel pain">
+
+**Problem:** Time-based schedules don't know if the upstream DAG finished.
+A DAG scheduled at 6am might start before yesterday's data arrived.
+
 </div>
+
+<v-click>
+
+<div class="panel action">
+
+**Solution:** Assets -- a DAG declares what data it produces; downstream DAGs run when that data is ready, not on a clock.
+
+</div>
+
+</v-click>
 
 ---
 layout: blue-sidebar
@@ -36,32 +45,92 @@ layout: blue-sidebar
 
 ::header::
 
-## Assets in Code
+## Pipeline With Asset
+
+::content::
+
+```mermaid
+flowchart LR
+  D02["DAG 02\ndaily_sales\n(scheduled daily)"]
+  RS(["Asset\nraw_sales"])
+  D03["DAG 03b\nvalidate_sales\n(triggered by asset)"]
+  DS(["Asset\ndaily_sales"])
+
+  D02 -->|emits| RS
+  RS -->|triggers| D03
+  D03 -->|emits on approve| DS
+```
+
+<div class="caption" v-click>
+DAG 03b does not run on a clock. It wakes up the moment DAG 02 marks <code>raw_sales</code> ready.
+</div>p
+
+---
+layout: blue-sidebar
+---
+
+::header::
+
+## Assets -- Producer
 
 ::content::
 
 ```python
-from airflow.sdk import Asset
+@task(outlets=[Asset("raw_sales")])
+def insert_sales(ds=None, **context):
+    # ... insert rows ...
 
-# Producer — emits the asset when the task completes
-@task(outlets=[Asset("daily_sales")])
-def load_sales(...):
-    ...
+    # Attach metadata to the asset event
+    context["outlet_events"][Asset("raw_sales")].extra = {
+        "date": ds,
+        "count": len(records),
+    }
+```
 
-# Consumer — wakes up when daily_sales is updated
-@dag(schedule=Asset("daily_sales"))
-def genre_report():
-    ...
+<v-click>
+
+- `outlets` declares what this task produces
+- `outlet_events[asset].extra` attaches a dict that travels with the event
+
+</v-click>
+
+---
+layout: blue-sidebar
+---
+
+::header::
+
+## Assets -- Consumer
+
+::content::
+
+```python
+@dag(schedule=Asset("raw_sales"))   # fires when raw_sales is updated
+def downstream():
+    @task
+    def print_event(**context):
+        events = context["triggering_asset_events"][Asset("raw_sales")]
+        print(events[0].extra)
+        # {"date": "2026-05-01", "count": 5}
 ```
 
 <v-clicks>
 
-- `outlets` declares what data a task produces; Airflow records the update on success
-- `schedule=Asset(...)` replaces a cron string — the DAG runs on data, not on time
-- The asset name is just a string; keep it stable across DAGs
-- In this workshop: `sales_quarantine` and `daily_sales` are the two assets
+- `schedule=Asset(...)` replaces a cron string -- no fixed time needed
+- `triggering_asset_events` gives the consumer access to the producer's extra data
 
 </v-clicks>
+
+---
+layout: blue-title-slide
+---
+
+# Exercise 3a
+### Asset Handoff
+
+
+
+
 
 ---
 layout: blue-sidebar
@@ -84,7 +153,7 @@ layout: blue-sidebar
   </div>
   <div class="concept-step action" v-click>
     <strong>The goal</strong>
-    <p>Insert clean records. Quarantine bad ones with a reason. Then pause and ask a human — should we proceed?</p>
+    <p>Insert clean records. Quarantine bad ones with a reason. Then pause and ask a human -- should we proceed?</p>
   </div>
 </div>
 
@@ -94,37 +163,14 @@ layout: blue-sidebar
 
 ::header::
 
-## validate_and_insert
+## Validate & quarantine
 
 ::content::
 
-```python
-@task(outlets=Asset("sales_quarantine"))
-def validate_and_insert(**context):
-    events = context["triggering_asset_events"].get(Asset("raw_sales"), [])
-    ds = events[0].extra["date"]
-    records = json.loads((REPO_ROOT / "data" / "sales" / f"{ds}.json").read_text())
 
-    hook = PostgresHook(postgres_conn_id="bookshop_postgres")
-    known_isbns = {row[0] for row in hook.get_records("SELECT isbn FROM books")}
+- One loop. Valid rows go to <code>daily_sales</code>. Bad rows go to <code>sales_quarantine</code>. 
+- If sale is negative or book is unknown quarantine the row 
 
-    valid_rows, bad_rows = [], []
-    for rec in records:
-        if rec["quantity"] <= 0:
-            bad_rows.append((json.dumps(rec), f"invalid quantity: {rec['quantity']}"))
-        elif rec["isbn"] not in known_isbns:
-            bad_rows.append((json.dumps(rec), f"unknown isbn: {rec['isbn']}"))
-        else:
-            valid_rows.append((rec["isbn"], ds, rec["quantity"], rec["total"]))
-
-    hook.insert_rows("daily_sales", valid_rows, ...)
-    hook.insert_rows("sales_quarantine", bad_rows, ...)
-    return markdown_table(bad_rows)   # returned as XCom
-```
-
-<div class="caption" v-click>
-One loop. Valid rows go to <code>daily_sales</code>. Bad rows go to <code>sales_quarantine</code>. The return value is a formatted table — XCom will carry it to the next task.
-</div>
 
 ---
 layout: blue-sidebar
@@ -156,8 +202,7 @@ Approve to continue. Reject to stop this run.
 
 <div class="concept-shell" style="margin-top:0.5rem">
   <div class="concept-step action" v-click>
-    <strong>What happens in the UI</strong>
-    <p>Airflow pauses the DAG and shows the quarantine table — pulled from XCom — inside an Approve/Reject form. No external tools needed.</p>
+    <p>Airflow pauses the DAG and shows the quarantine table -- pulled from XCom -- inside an Approve/Reject form. No external tools needed.</p>
   </div>
   <div class="concept-step success" v-click>
     <strong>On Approve</strong>
@@ -177,18 +222,45 @@ Split valid and bad records, quarantine the bad ones, then approve in the Airflo
 `dags/03b_validate_sales_starter.py`
 
 ---
-layout: blue-title-slide
+layout: blue-sidebar
 ---
 
-# After Exercise 3b
+::header::
 
-<div class="big-idea">
-Valid records are in <code>daily_sales</code>. Bad records are in quarantine.
-<br>
-<span v-click>A human reviewed and approved the data directly in the Airflow UI before the pipeline continued.</span>
-</div>
+# Data Validation
 
-<div v-click class="subtle-line">
-✅ Assets
-✅ Human in the loop
-</div>
+::content::
+
+<ul class="check-list">
+  <li>Data Validation &amp; Quarantining </li>
+  <li>Assets</li>
+  <li>HITL</li>
+</ul>
+
+---
+layout: blue-sidebar
+---
+
+::header::
+
+# Next Goal
+
+::content::
+
+```python
+known_isbns = {row[0] for row in hook.get_records("SELECT isbn FROM books")}
+
+valid_rows, bad_rows = [], []
+for rec in records:
+    if rec["quantity"] <= 0:
+        bad_rows.append(...)
+    elif rec["isbn"] not in known_isbns:
+        bad_rows.append(...)
+    else:
+        valid_rows.append(...)
+```
+
+- What happens if the sales records grow in size? Instead of 10 sales, we get 10K sales.
+- What if we want to parallelize the validation?
+- Ideal way is to use SQL
+- But is there an Airflow construct?

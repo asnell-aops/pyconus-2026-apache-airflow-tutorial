@@ -18,7 +18,7 @@ def query(sql):
     return df
 
 
-tab1, tab2, tab3 = st.tabs(["Books Catalog", "Daily Sales", "Genre Report"])
+tab1, tab2, tab3, tab4 = st.tabs(["Books Catalog", "Raw Sales", "Daily Sales", "Genre Report"])
 
 with tab1:
     st.header("Books Catalog")
@@ -35,6 +35,28 @@ with tab1:
         st.warning(f"Run DAG 01 first. ({e})")
 
 with tab2:
+    st.header("Raw Sales")
+    try:
+        totals = query("SELECT COUNT(*) AS sales, SUM(total) AS revenue FROM raw_sales")
+
+        col1, col2 = st.columns(2)
+        col1.metric("Total Transactions", int(totals["sales"].iloc[0]))
+        col2.metric("Total Revenue", f"${totals['revenue'].iloc[0]:,.2f}")
+
+        st.subheader("Sales by Date")
+        df = query("""
+            SELECT sale_date, SUM(quantity) AS units, SUM(total) AS revenue
+            FROM raw_sales GROUP BY sale_date ORDER BY sale_date
+        """)
+        st.line_chart(df.set_index("sale_date")[["units", "revenue"]])
+
+        st.subheader("All Records")
+        df = query("SELECT sale_id, isbn, sale_date, quantity, total FROM raw_sales ORDER BY sale_date DESC")
+        st.dataframe(df, use_container_width=True)
+    except Exception as e:
+        st.warning(f"Run DAG 02 first. ({e})")
+
+with tab3:
     st.header("Daily Sales")
     try:
         totals = query("SELECT COUNT(*) AS sales, SUM(total) AS revenue FROM daily_sales")
@@ -58,7 +80,7 @@ with tab2:
     except Exception as e:
         st.warning(f"Run DAGs 02 and 03 first. ({e})")
 
-with tab3:
+with tab4:
     st.header("Genre Report")
     try:
         df = query("""

@@ -1,20 +1,18 @@
 import json
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from airflow.sdk import dag, task, Asset
 from airflow.providers.standard.operators.hitl import ApprovalOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent
 raw_sales_asset = Asset("raw_sales")
 
 @dag(
     dag_id="03b_validate_sales",
-    start_date=datetime(2026, 5, 1),
+    start_date=datetime(2026, 4, 30),
     schedule=raw_sales_asset,
-    catchup=False,
+    catchup=True,
     tags=["solution"],
 )
 def validate_sales():
@@ -32,10 +30,12 @@ def validate_sales():
             row_count = extra["count"]
             print(f"Validating sales for {ds}, expected {row_count} rows")
         
-        path = REPO_ROOT / "data" / "sales" / f"{ds}.json"
-        records = json.loads(path.read_text())
-    
         hook = PostgresHook(postgres_conn_id="bookshop_postgres")
+        raw_rows = hook.get_records(
+            "SELECT isbn, sale_date, quantity, total FROM raw_sales WHERE sale_date = %s", parameters=[ds]
+        )
+        records = [{"isbn": r[0], "sale_date": str(r[1]), "quantity": r[2], "total": float(r[3])} for r in raw_rows]
+
         known_isbns = {row[0] for row in hook.get_records("SELECT isbn FROM books")}
 
         valid_rows, bad_rows = [], []
@@ -45,8 +45,10 @@ def validate_sales():
             elif rec["isbn"] not in known_isbns:
                 bad_rows.append((json.dumps(rec), f"unknown isbn: {rec['isbn']}"))
             else:
-                valid_rows.append((rec["isbn"], ds, rec["quantity"], rec["total"]))
+                valid_rows.append((rec["isbn"], rec["sale_date"], rec["quantity"], rec["total"]))
 
+        hook.run("DELETE FROM daily_sales WHERE sale_date = %s", parameters=[ds])
+        hook.run("DELETE FROM sales_quarantine WHERE raw->>'sale_date' = %s", parameters=[ds])
         hook.insert_rows(
             table="daily_sales",
             rows=valid_rows,
