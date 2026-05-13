@@ -33,11 +33,21 @@ def ingest_books():
         # Use csv.reader, skip the header row with next(reader).
         # Each row should be a tuple: (isbn, title, author, genre, price)
         rows = []
+        with open(REPO_ROOT / "data" / "books.csv") as f:
+            reader = csv.reader(f)
+            next(reader)  # skip the header
+            rows = [tuple(row) for row in reader]
 
         # TODO 2: Insert rows into the books table using hook.insert_rows.
         # Use replace=True and replace_index="isbn" to make it safe to rerun.
         # target_fields=["isbn", "title", "author", "genre", "price"]
-
+        hook.insert_rows(
+            table="books",
+            rows=rows,
+            target_fields=["isbn", "title", "author", "genre", "price"],
+            replace_index="isbn",
+            replace=True,
+        )
         return len(rows)
 
     reconcile = SQLExecuteQueryOperator(
